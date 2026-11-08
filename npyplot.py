@@ -36,11 +36,15 @@ import sys
 def read_data(param_File):
 	"""Function to read and process numpy arrays from simulation"""
 
-        ## READ and process DATA
-	ini=dict()
-	for line in open(param_File):
-		key,value=line.split("=",2)
-		ini[key]=value[:-1]
+	## READ and process DATA
+	ini = {}
+	with open(param_File, 'r', encoding='utf-8') as f:
+		for raw_line in f:
+			line = raw_line.strip()
+			if not line or line.startswith('#'):
+				continue
+			key, value = line.split("=", 1)
+			ini[key.strip()] = value.strip()
 
 	prefix = ini['outputprefix']
 	time = np.load(prefix+"-time.npy")
@@ -140,14 +144,14 @@ def interactive_plot(dens,velo, time, fmt="html", filename=''):
 			y=np.linspace(float(time[0]),float(time[-1]),time.shape[0]), origin='lower', facet_col=0)	#, labels={'facet_col':'sigma'} )
 	# Set facet titles
 	for i, sigma in enumerate(["density","velocity"]):
-	       fig_mosaic.layout.annotations[i]['text'] = '%s' %sigma
+		fig_mosaic.layout.annotations[i]['text'] = '%s' %sigma
 
 	# use different color scales
 	# update traces to use different coloraxis
 	for i, t in enumerate(fig_mosaic.data):
 		t.update(coloraxis=f"coloraxis{i+1}")
 	for fr in fig_mosaic.frames:
-	# update each of the traces in each of the animation frames
+		# update each of the traces in each of the animation frames
 		for i, t in enumerate(fr.data):
 			t.update(coloraxis=f"coloraxis{i+1}")
 	fig_mosaic.update_layout(
