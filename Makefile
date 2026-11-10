@@ -1,35 +1,33 @@
-# Makefile for the Nagel-Schreckenberg Traffic Model code
-# Starting point of a "Peachy Assignment"
-
 CXX = g++
-CXXFLAGS = -O2 -march=native -std=c++17 -g -Wall
-LDFLAGS = -g
-OBJS = traffic.o parameters.o npywriter.o
+PYTHON = python3
 
-all: traffic
+CXXFLAGS = -O2 -march=native -std=c++17 -g -Wall -Wextra
+OMPFLAGS = -fopenmp
 
-traffic.o: traffic.cpp parameters.h npywriter.h
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+COMMON_SOURCES = parameters.cpp npywriter.cpp
+HEADERS = parameters.h npywriter.h
 
-parameters.o: parameters.cpp parameters.h
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+THREADS ?= 1 2 4
+REPEATS ?= 5
 
-npywriter.o: npywriter.cpp npywriter.h
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+.PHONY: all check benchmark plot clean
 
-traffic: ${OBJS}
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+all: traffic_serial traffic_omp
+
+traffic_serial: traffic.cpp $(COMMON_SOURCES) $(HEADERS)
+	$(CXX) $(CXXFLAGS) traffic.cpp $(COMMON_SOURCES) -o $@
+
+traffic_omp: traffic_omp.cpp $(COMMON_SOURCES) $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) traffic_omp.cpp $(COMMON_SOURCES) -o $@
+
+check: all
+	$(PYTHON) scripts/experiment.py check --config test.ini --threads $(THREADS)
+
+benchmark: all
+	$(PYTHON) scripts/experiment.py benchmark --config largetest.ini --threads $(THREADS) --repeats $(REPEATS)
+
+plot:
+	$(PYTHON) scripts/experiment.py plot
 
 clean:
-	$(RM) $(OBJS)
-
-distclean: clean
-	$(RM) traffic traffic-????.npy traffic.png test-????.npy largetest-????.npy test.png largetest.png
-
-test: traffic test.ini
-	time ./traffic test.ini && python npyplot.py test.ini
-
-largetest: traffic largetest.ini
-	time ./traffic largetest.ini && python npyplot.py largetest.ini
-
-.PHONY: all clean distclean run 
+	$(RM) traffic_serial traffic_omp
